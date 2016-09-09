@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!-- This file is part of the sale_payment module for Tryton.
+The COPYRIGHT file at the top level of this repository contains the full
+copyright notices and license terms. -->
+<data>
+    <xpath
+        expr="/form/label[@name='recibido']"
+        position="before">
+        <newline/>
+        <label name="anticipo"/>
+        <field name="anticipo"/>
+        <label name="utilizar_anticipo"/>
+        <field name="utilizar_anticipo"/>
+        <label name="restante"/>
+        <field name="restante"/>
+        <field name="lineas_anticipo" invisible="1"/>
+        <newline/>
+    </xpath>
+</data>

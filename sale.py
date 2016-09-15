@@ -79,6 +79,9 @@ class WizardSalePayment(Wizard):
     @classmethod
     def __setup__(cls):
         super(WizardSalePayment, cls).__setup__()
+        cls._error_messages.update({
+                'not_tipo_p': ('No ha configurado el tipo de pago. \n-Seleccione el estado de cuenta en "Todos los estados de cuenta" \n-Seleccione forma de pago.'),
+                })
 
     def default_start(self, fields):
         pool = Pool()
@@ -117,7 +120,6 @@ class WizardSalePayment(Wizard):
                 amount_a = amount_a + line.credit
                 lines_credits.append(str(line.id) +',')
 
-
         ModelData = pool.get('ir.model.data')
         User = pool.get('res.user')
         Group = pool.get('res.group')
@@ -154,38 +156,43 @@ class WizardSalePayment(Wizard):
             return
 
         Product = Pool().get('product.product')
-        if sale.lines:
-            # get all products
-            products = []
-            locations = [sale.warehouse.id]
-            for line in sale.lines:
-                if not line.product or line.product.type not in PRODUCT_TYPES:
-                    continue
-                if line.product not in products:
-                    products.append(line.product)
-            # get quantity
-            with Transaction().set_context(locations=locations):
-                quantities = Product.get_quantity(
-                    products,
-                    sale.get_enough_stock_qty(),
-                    )
 
-            # check enough stock
-            for line in sale.lines:
-                if line.product.type not in PRODUCT_TYPES:
-                    continue
-                else:
-                    if line.product and line.product.id in quantities:
-                        qty = quantities[line.product.id]
-                    if qty < line.quantity:
-                        if not in_group():
-                            self.raise_user_error('No hay suficiente stock del producto: \n %s \n en la bodega %s', (line.product.name, sale.warehouse.name))
 
-                        line.raise_user_warning('not_enough_stock_%s' % line.id,
-                               'No hay suficiente stock del producto: "%s"'
-                            'en la bodega "%s", para realizar esta venta.', (line.product.name, sale.warehouse.name))
-                        # update quantities
-                        quantities[line.product.id] = qty - line.quantity
+        if sale.acumulativo == True:
+            pass
+        else:
+            if sale.lines:
+                # get all products
+                products = []
+                locations = [sale.warehouse.id]
+                for line in sale.lines:
+                    if not line.product or line.product.type not in PRODUCT_TYPES:
+                        continue
+                    if line.product not in products:
+                        products.append(line.product)
+                # get quantity
+                with Transaction().set_context(locations=locations):
+                    quantities = Product.get_quantity(
+                        products,
+                        sale.get_enough_stock_qty(),
+                        )
+
+                # check enough stock
+                for line in sale.lines:
+                    if line.product.type not in PRODUCT_TYPES:
+                        continue
+                    else:
+                        if line.product and line.product.id in quantities:
+                            qty = quantities[line.product.id]
+                        if qty < line.quantity:
+                            if not in_group():
+                                self.raise_user_error('No hay suficiente stock del producto: \n %s \n en la bodega %s', (line.product.name, sale.warehouse.name))
+
+                            line.raise_user_warning('not_enough_stock_%s' % line.id,
+                                   'No hay suficiente stock del producto: "%s"'
+                                'en la bodega "%s", para realizar esta venta.', (line.product.name, sale.warehouse.name))
+                            # update quantities
+                            quantities[line.product.id] = qty - line.quantity
 
         if user.id != 0 and not sale_device:
             self.raise_user_error('not_sale_device')
@@ -195,18 +202,22 @@ class WizardSalePayment(Wizard):
         total = sale.total_amount
         if not term_lines:
             term_lines = [(Date.today(), total)]
-
+        credito = False
         if sale.paid_amount:
             payment_amount = sale.total_amount - sale.paid_amount
         else:
             payment_amount = sale.total_amount
 
+        if term_lines > 1:
+            credito == True
         for date, amount in term_lines:
             if date == Date.today():
                 if amount < 0 :
                     amount *=-1
                 payment_amount = amount
-
+            else:
+                payment_amount = Decimal(0.0)
+                credito = True
         if sale.paid_amount:
             amount = sale.total_amount - sale.paid_amount
         else:
@@ -229,7 +240,9 @@ class WizardSalePayment(Wizard):
             'party': sale.party.id,
             'tipo_p':tipo_p,
             'anticipo' : amount_a,
-            'lineas_anticipo' : str(lines_credits)
+            'lineas_anticipo' : str(lines_credits),
+            'credito' : credito,
+            'amount': total
             }
 
     def transition_pay_(self):

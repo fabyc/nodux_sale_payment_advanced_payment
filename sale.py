@@ -223,13 +223,24 @@ class WizardSalePayment(Wizard):
         else:
             amount = sale.total_amount
 
-        if payment_amount < amount:
-            to_pay = payment_amount
-        elif payment_amount > amount:
-            to_pay = amount
-
+        if sale.total_amount > Decimal(0.0):
+            if payment_amount < amount:
+                to_pay = payment_amount
+            elif payment_amount > amount:
+                to_pay = amount
+            else:
+                to_pay= amount
         else:
-            to_pay = amount
+            to_pay = Decimal(0.0)
+            sales = Sale.search([('description', '=', sale.description)])
+            for sale in sales:
+                if sale.total_amount > Decimal(0.0):
+                    if sale.paid_amount:
+                        if sale.paid_amount > Decimal(0.0) and sale.state != "done":
+                            to_pay = sale.paid_amount * (-1)
+                    else:
+                        if sale.state == "done":
+                            to_pay = sale.total_amount * (-1)
 
         return {
             'journal': sale_device.journal.id

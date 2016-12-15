@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!-- The COPYRIGHT file at the top level of this repository contains the full
+     copyright notices and license terms. -->
+<data>
+    <xpath expr="/form/field[@name='default_account_payable']" position="after">
+        <separator string="Anticipos" colspan="2" id="advanced_info"/>
+        <newline/>
+        <label name="default_account_advanced"/>
+        <field name="default_account_advanced"/>
+        <label name="default_account_return"/>
+        <field name="default_account_return"/>
+        <label name="default_account_e"/>
+        <field name="default_account_e"/>
+        <label name="default_account_c"/>
+        <field name="default_account_c"/>
+        <label name="default_account_t"/>
+        <field name="default_account_t"/>
+        <label name="default_account_t_c"/>
+        <field name="default_account_t_c"/>
+        <label name="default_account_d"/>
+        <field name="default_account_d"/>
+        <label name="default_account_wf"/>
+        <field name="default_account_wf"/>
+        <label name="default_account_wi"/>
+        <field name="default_account_wi"/>
+        <label name="sequence_advanced"/>
+        <field name="sequence_advanced"/>
+    </xpath>
+</data>

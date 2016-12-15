@@ -19,7 +19,7 @@ class Move:
 
     @classmethod
     def _get_origin(cls):
-        return super(Move, cls)._get_origin() + ['sale.sale']
+        return super(Move, cls)._get_origin() + ['sale.sale', 'sale.advanced']
 
 
 class Line:
@@ -28,4 +28,4 @@ class Line:
     @classmethod
     def __setup__(cls):
         super(Line, cls).__setup__()
-        cls._check_modify_exclude = {'reconciliation', 'debit', 'credit'}
+        cls._check_modify_exclude = {'reconciliation', 'debit', 'credit', 'state'}

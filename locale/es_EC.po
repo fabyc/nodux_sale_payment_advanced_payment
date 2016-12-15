@@ -1,0 +1,219 @@
+#
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:account.configuration,default_account_advanced:"
+msgid "Default Account Advanced Payment"
+msgstr "Cuenta de Anticipo por defecto"
+
+msgctxt "field:account.configuration,default_account_c:"
+msgid "Default Account Check"
+msgstr "Cuenta Cheque por defecto"
+
+msgctxt "field:account.configuration,default_account_d:"
+msgid "Default Account Deposit"
+msgstr "Cuenta de Depósito por defecto"
+
+msgctxt "field:account.configuration,default_account_e:"
+msgid "Default Account Cash"
+msgstr "Cuenta Efectivo por defecto"
+
+msgctxt "field:account.configuration,default_account_return:"
+msgid "Default Account for the return of Advanced"
+msgstr "Cuenta para Devolución de Anticipo por defecto"
+
+msgctxt "field:account.configuration,default_account_t:"
+msgid "Default Account Transfer"
+msgstr "Cuenta Transferencia Electrónica por defecto"
+
+msgctxt "field:account.configuration,default_account_t_c:"
+msgid "Default Account Credit Card"
+msgstr "Cuenta Tarjeta de Crédito por defecto"
+
+msgctxt "field:account.configuration,default_account_wf:"
+msgid "Default Account Withholding F"
+msgstr "Cuenta Retención en la Fuente por defecto"
+
+msgctxt "field:account.configuration,default_account_wi:"
+msgid "Default Account Withholding IVA"
+msgstr "Cuenta Retención del IVA por defecto"
+
+msgctxt "field:account.configuration,sequence_advanced:"
+msgid "Sequence advanced"
+msgstr "Secuencia de Anticipo"
+
+msgctxt "field:sale.advanced,account:"
+msgid "Account"
+msgstr "Cuenta"
+
+msgctxt "field:sale.advanced,amount:"
+msgid "Payment"
+msgstr "Pago"
+
+msgctxt "field:sale.advanced,bank:"
+msgid "Bank"
+msgstr "Banco"
+
+msgctxt "field:sale.advanced,comment:"
+msgid "Comment"
+msgstr "Comentario"
+
+msgctxt "field:sale.advanced,company:"
+msgid "Company"
+msgstr "Empresa"
+
+msgctxt "field:sale.advanced,create_date:"
+msgid "Create Date"
+msgstr "Fecha de Creación"
+
+msgctxt "field:sale.advanced,create_uid:"
+msgid "Create User"
+msgstr "Usuario creación"
+
+msgctxt "field:sale.advanced,currency:"
+msgid "Currency"
+msgstr "Moneda"
+
+msgctxt "field:sale.advanced,date:"
+msgid "Date"
+msgstr "Fecha"
+
+msgctxt "field:sale.advanced,employee:"
+msgid "Salesman"
+msgstr "Vendedor"
+
+msgctxt "field:sale.advanced,id:"
+msgid "ID"
+msgstr "Identificador"
+
+msgctxt "field:sale.advanced,journal:"
+msgid "Journal"
+msgstr "Libro Diario"
+
+msgctxt "field:sale.advanced,number:"
+msgid "Number"
+msgstr "Número"
+
+msgctxt "field:sale.advanced,party:"
+msgid "Party"
+msgstr "Cliente"
+
+msgctxt "field:sale.advanced,pay:"
+msgid "Tipo"
+msgstr ""
+
+msgctxt "field:sale.advanced,rec_name:"
+msgid "Name"
+msgstr "Nombre"
+
+msgctxt "field:sale.advanced,reference:"
+msgid "Reference"
+msgstr "Referencia"
+
+msgctxt "field:sale.advanced,state:"
+msgid "State"
+msgstr "Estado"
+
+msgctxt "field:sale.advanced,vencimiento:"
+msgid "Date Out"
+msgstr "Fecha de Vencimiento"
+
+msgctxt "field:sale.advanced,write_date:"
+msgid "Write Date"
+msgstr "Modificado por usuario"
+
+msgctxt "field:sale.advanced,write_uid:"
+msgid "Write User"
+msgstr "Usuario modificación"
+
+msgctxt "field:sale.payment.form,anticipo:"
+msgid "Anticipo"
+msgstr ""
+
+msgctxt "field:sale.payment.form,devolver_restante:"
+msgid "Devolver valor restante"
+msgstr ""
+
+msgctxt "field:sale.payment.form,lineas_anticipo:"
+msgid "Lineas de Anticipo"
+msgstr ""
+
+msgctxt "field:sale.payment.form,restante:"
+msgid "Anticipo restante"
+msgstr ""
+
+msgctxt "field:sale.payment.form,utilizar_anticipo:"
+msgid "Utilizar anticipo"
+msgstr ""
+
+msgctxt "help:sale.advanced,number:"
+msgid "Advanced Number"
+msgstr "Número Anticipo"
+
+msgctxt "help:sale.payment.form,devolver_restante:"
+msgid "Devolver valor restante en efectivo"
+msgstr ""
+
+msgctxt "model:ir.action,name:act_advanced_form"
+msgid "Anticipos"
+msgstr ""
+
+msgctxt "model:ir.action.act_window.domain,name:act_advanced_form_domain_all"
+msgid "All"
+msgstr "Todos"
+
+msgctxt "model:ir.ui.menu,name:menu_advanced"
+msgid "Anticipos"
+msgstr ""
+
+msgctxt "model:sale.advanced,name:"
+msgid "Advanced"
+msgstr "Anticipo"
+
+msgctxt "selection:sale.advanced,pay:"
+msgid "Cheque"
+msgstr "Cheque"
+
+msgctxt "selection:sale.advanced,pay:"
+msgid "Depósito"
+msgstr ""
+
+msgctxt "selection:sale.advanced,pay:"
+msgid "Efectivo"
+msgstr "Efectivo"
+
+msgctxt "selection:sale.advanced,pay:"
+msgid "Retención del IVA"
+msgstr ""
+
+msgctxt "selection:sale.advanced,pay:"
+msgid "Retención en la Fuente"
+msgstr ""
+
+msgctxt "selection:sale.advanced,pay:"
+msgid "Tarjeta de Crédito"
+msgstr ""
+
+msgctxt "selection:sale.advanced,pay:"
+msgid "Transferencia Electrónica"
+msgstr ""
+
+msgctxt "selection:sale.advanced,state:"
+msgid "Draft"
+msgstr "Borrador"
+
+msgctxt "selection:sale.advanced,state:"
+msgid "Posted"
+msgstr "Contabilizado"
+
+msgctxt "view:account.configuration:"
+msgid "Anticipos"
+msgstr ""
+
+msgctxt "view:sale.advanced:"
+msgid "Voucher"
+msgstr "Comprobantes"
+
+msgctxt "view:sale.advanced:"
+msgid "_Generar Anticipo"
+msgstr ""

@@ -13,6 +13,8 @@ copyright notices and license terms. -->
         <field name="utilizar_anticipo"/>
         <label name="restante"/>
         <field name="restante"/>
+        <label name="devolver_restante"/>
+        <field name="devolver_restante"/>
         <field name="lineas_anticipo" invisible="1"/>
         <newline/>
     </xpath>

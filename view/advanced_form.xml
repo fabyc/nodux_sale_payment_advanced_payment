@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!-- This file is part of the nodux_account_voucher_ec module for Tryton.
+The COPYRIGHT file at the top level of this repository contains
+the full copyright notices and license terms. -->
+<form string="Advanced" col="8">
+    <field name="journal" invisible="1"/>
+    <field name="currency" invisible="1"/>
+    <newline/>
+    <label name="number"/>
+    <field name="number"/>
+    <newline/>
+    <label name="party"/>
+    <field name="party"/>
+    <newline/>
+    <label name="date"/>
+    <field name="date"/>
+    <label name="employee"/>
+    <field name="employee"/>
+    <newline/>
+    <label name="amount"/>
+    <field name="amount"/>
+    <label name="pay"/>
+    <field name="pay"/>
+    <newline/>
+    <label name="reference"/>
+    <field name="reference"/>
+    <label name="bank"/>
+    <field name="bank"/>
+    <label name="vencimiento"/>
+    <field name="vencimiento"/>
+    <label name="account"/>
+    <field name="account"/>
+    <newline/>
+    <label name="comment"/>
+    <field name="comment"/>
+    <newline/>
+
+    <group colspan="6" id="group_advanced">
+        <button name="post" string="_Generar Anticipo"/>
+    </group>
+</form>

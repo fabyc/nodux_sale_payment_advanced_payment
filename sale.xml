@@ -10,5 +10,104 @@ copyright notices and license terms. -->
                 ref="sale_payment.sale_payment_view_form"/>
             <field name="name">sale_payment_form</field>
         </record>
+
+        <!--Add views -->
+        <record model="ir.ui.view" id="advanced_view_form">
+            <field name="model">sale.advanced</field>
+            <field name="type">form</field>
+            <field name="name">advanced_form</field>
+        </record>
+
+        <record model="ir.ui.view" id="advanced_view_tree">
+            <field name="model">sale.advanced</field>
+            <field name="type">tree</field>
+            <field name="priority" eval="10"/>
+            <field name="name">advanced_tree</field>
+        </record>
+
+        <record model="ir.ui.view" id="advanced_line_view_tree_sequence">
+            <field name="model">sale.advanced</field>
+            <field name="type">tree</field>
+            <field name="priority" eval="20"/>
+            <field name="name">advanced_line_tree_sequence</field>
+        </record>
+
+        <record model="ir.ui.view" id="list_advanced_view_tree">
+            <field name="model">sale.list_advanced</field>
+            <field name="type">tree</field>
+            <field name="priority">20</field>
+            <field name="name">list_advanced_tree</field>
+        </record>
+        <record model="ir.ui.view" id="list_advanced_view_form">
+            <field name="model">sale.list_advanced</field>
+            <field name="type">form</field>
+            <field name="priority">10</field>
+            <field name="name">list_advanced_form</field>
+        </record>
+
+        <!-- Actions -->
+        <record model="ir.action.act_window" id="act_advanced_form">
+            <field name="name">Nuevo Anticipo</field>
+            <field name="res_model">sale.advanced</field>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_advanced_view_form">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="advanced_view_form"/>
+            <field name="act_window" ref="act_advanced_form"/>
+        </record>
+
+        <menuitem name="Nuevo Anticipo" parent="sale.menu_sale" id="menu_advanced"
+            sequence="2" icon="tryton-list" action="act_advanced_form"/>
+
+        <record model="ir.action.act_window" id="act_list_advanced_form">
+            <field name="name">Listado de Anticipos</field>
+            <field name="res_model">sale.list_advanced</field>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_list_advanced_view_form">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="list_advanced_view_form"/>
+            <field name="act_window" ref="act_list_advanced_form"/>
+        </record>
+
+        <record model="ir.action.act_window.view" id="act_list_advanced_view_tree">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="list_advanced_view_tree"/>
+            <field name="act_window" ref="act_list_advanced_form"/>
+        </record>
+
+
+        <menuitem name="Listado de Anticipos" parent="sale.menu_sale" id="menu_list_advanced"
+            sequence="3" icon="tryton-list" action="act_list_advanced_form"/>
+
+        <!--Reporte Anticipo -->
+        <record model="ir.action.report" id="report_advanced">
+           <field name="name">Reporte Anticipo</field>
+           <field name="model">sale.advanced</field>
+           <field name="report_name">sale.advanced_report</field>
+           <field name="report">nodux_sale_payment_advanced_payment/advanced.odt</field>
+       </record>
+
+       <record model="ir.action.keyword" id="report_advanced_keyword">
+           <field name="keyword">form_print</field>
+           <field name="model">sale.advanced,-1</field>
+           <field name="action" ref="report_advanced"/>
+       </record>
+
+       <!--Reporte Lista de Anticipos -->
+       <record model="ir.action.report" id="report_list_advanced">
+          <field name="name">Historial de Anticipo</field>
+          <field name="model">sale.list_advanced</field>
+          <field name="report_name">sale.list_advanced_report</field>
+          <field name="report">nodux_sale_payment_advanced_payment/list_advanced.odt</field>
+      </record>
+
+      <record model="ir.action.keyword" id="report_list_advanced_keyword">
+          <field name="keyword">form_print</field>
+          <field name="model">sale.list_advanced,-1</field>
+          <field name="action" ref="report_list_advanced"/>
+      </record>
+
     </data>
 </tryton>

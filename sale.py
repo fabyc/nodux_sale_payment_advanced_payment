@@ -1,11 +1,12 @@
+#! -*- coding: utf8 -*-
 # This file is part of the sale_payment module for Tryton.
 # The COPYRIGHT file at the top level of this repository contains the full
 # copyright notices and license terms.
-#! -*- coding: utf8 -*-
+
 from decimal import Decimal
 from trytond.model import ModelView, fields, ModelSQL, Workflow
 from trytond.pool import PoolMeta, Pool
-from trytond.pyson import Bool, Eval, Not, If, PYSONEncoder, Id
+from trytond.pyson import Bool, Eval, Not, If, PYSONEncoder, Id, In
 from trytond.transaction import Transaction
 from trytond.wizard import Wizard, StateView, StateTransition, Button, StateAction
 from trytond import backend
@@ -16,6 +17,8 @@ from functools import partial
 from trytond.report import Report
 from trytond.transaction import Transaction
 import os
+import pytz
+import time
 
 conversor = None
 try:
@@ -25,10 +28,450 @@ except:
     print("Warning: Does not possible import numword module!")
     print("Please install it...!")
 
-__all__ = [ 'SalePaymentForm',  'WizardSalePayment']
+__all__ = ['ListAdvanced', 'Advanced', 'SalePaymentForm',  'WizardSalePayment',
+ 'AdvancedReport', 'ListAdvancedReport']
 __metaclass__ = PoolMeta
+
 _ZERO = Decimal('0.0')
 PRODUCT_TYPES = ['goods']
+_STATES = {
+    'readonly': In(Eval('state'), ['posted']),
+}
+
+_PAY = [
+    ('efectivo','Efectivo'),
+    ('cheque', 'Cheque'),
+    ('transferencia', u'Transferencia Electrónica'),
+    ('tarjeta', u'Tarjeta de Crédito'),
+    ('deposito', u'Depósito'),
+    ('fuente', u'Retención en la Fuente'),
+    ('iva', u'Retención del IVA')
+]
+
+class ListAdvanced(ModelSQL, ModelView):
+    "List Advanced"
+    __name__ = "sale.list_advanced"
+    party = fields.Many2One('party.party', 'Party', states={
+                'required': ~Eval('active', True),
+                'readonly': In(Eval('state'), ['posted']),
+            })
+    lines = fields.One2Many('sale.advanced', 'advanced', 'Lines')
+    advanced_inicial = fields.Numeric('Valor Anticipo', digits=(16, 2), states=_STATES)
+    advanced_utilizado = fields.Function(fields.Numeric('Utilizado', digits=(16, 2), states=_STATES), 'get_utilizado')
+    advanced_balance = fields.Function(fields.Numeric('Balance', digits=(16, 2), states=_STATES), 'get_balance')
+    state = fields.Selection([
+        ('posted', 'Posted'),
+        ], 'State', select=True, readonly=True)
+
+    @classmethod
+    def __setup__(cls):
+        super(ListAdvanced, cls).__setup__()
+
+    @staticmethod
+    def default_state():
+        return 'posted'
+
+    @staticmethod
+    def default_advanced_inicial():
+        return Decimal(0.0)
+
+    @staticmethod
+    def default_advanced_utilizado():
+        return Decimal(0.0)
+
+    @staticmethod
+    def default_advanced_balance():
+        return Decimal(0.0)
+
+    @classmethod
+    def get_utilizado(cls, advanceds, names):
+        result = {n: {a.id: Decimal(0) for a in advanceds} for n in names}
+        amount = Decimal(0.0)
+        for name in names:
+            for advanced in advanceds:
+                amount = Decimal(0.0)
+                for line in advanced.lines:
+                    if line.utilizado:
+                        amount += line.utilizado
+                if amount:
+                    result[name][advanced.id] = amount
+                else:
+                    result[name][advanced.id] = Decimal(0.0)
+        return result
+
+    @classmethod
+    def get_balance(cls, advanceds, names):
+        result = {n: {a.id: Decimal(0) for a in advanceds} for n in names}
+        amount = Decimal(0.0)
+        for name in names:
+            for advanced in advanceds:
+                amount = Decimal(0.0)
+                for line in advanced.lines:
+                    if line.balance:
+                        amount += line.balance
+                if amount:
+                    result[name][advanced.id] = amount
+                else:
+                    result[name][advanced.id] = Decimal(0.0)
+        return result
+
+class ListAdvancedReport(Report):
+    __name__ = 'sale.list_advanced_report'
+
+    @classmethod
+    def parse(cls, report, records, data, localcontext):
+        pool = Pool()
+        User = pool.get('res.user')
+
+        advanced = records[0]
+        user = User(Transaction().user)
+
+        if user.company.timezone:
+            timezone = pytz.timezone(user.company.timezone)
+            dt = datetime.now()
+            hora = datetime.astimezone(dt.replace(tzinfo=pytz.utc), timezone)
+
+
+        localcontext['user'] = user
+        localcontext['company'] = user.company
+        localcontext['hora'] = hora.strftime('%H:%M:%S')
+        localcontext['fecha_im'] = hora.strftime('%d/%m/%Y')
+
+        return super(ListAdvancedReport, cls).parse(report, records, data,
+                localcontext=localcontext)
+
+class Advanced(ModelSQL, ModelView):
+    'Advanced'
+    __name__ = 'sale.advanced'
+    _rec_name = 'number'
+
+    advanced = fields.Many2One('sale.list_advanced', 'List Advanced')
+    number = fields.Char('Number', readonly=True, help="Advanced Number")
+    party = fields.Many2One('party.party', 'Party', states=_STATES, required=True)
+    date = fields.Date('Date', required=True, states=_STATES)
+    journal = fields.Many2One('account.journal', 'Journal', required=True,
+        states=_STATES)
+    currency = fields.Many2One('currency.currency', 'Currency', states=_STATES)
+    company = fields.Many2One('company.company', 'Company', states=_STATES)
+    comment = fields.Char('Comment', states=_STATES)
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('posted', 'Posted'),
+        ], 'State', select=True, readonly=True)
+    employee = fields.Many2One('company.employee', 'Salesman',
+        domain=[
+            ('company', '=', Eval('company', -1)),
+            ],
+        states=_STATES,
+        depends=['state', 'company'])
+
+    amount = fields.Numeric('Payment', digits=(16, 2), states=_STATES)
+    utilizado = fields.Numeric('Utilizado', digits=(16, 2), states=_STATES)
+    balance = fields.Numeric('Balance', digits=(16, 2), states=_STATES)
+
+    pay =  fields.Selection(_PAY, "Tipo", states=_STATES)
+
+    reference = fields.Char('Reference', states={
+        'invisible': Eval('pay') == 'efectivo',
+    })
+
+    bank = fields.Many2One('bank', 'Bank', states={
+        'invisible': Eval('pay') == 'efectivo',
+    })
+
+    vencimiento = fields.Date('Date Out', states={
+        'invisible': Eval('pay') == 'efectivo',
+    })
+
+    account = fields.Char('Account', states={
+        'invisible': Eval('pay') == 'efectivo',
+    })
+
+    move = fields.Many2One('account.move', 'Move')
+
+    @classmethod
+    def __setup__(cls):
+        super(Advanced, cls).__setup__()
+
+        cls._buttons.update({
+                'post': {
+                    'invisible': Eval('state') != 'draft',
+                    },
+                })
+
+        cls._order.insert(0, ('date', 'ASC'))
+        #cls._order.insert(1, ('number', 'DESC'))
+
+    @staticmethod
+    def default_employee():
+        User = Pool().get('res.user')
+
+        if Transaction().context.get('employee'):
+            return Transaction().context['employee']
+        else:
+            user = User(Transaction().user)
+            if user.employee:
+                return user.employee.id
+
+    @staticmethod
+    def default_state():
+        return 'draft'
+
+    @staticmethod
+    def default_pay():
+        return 'efectivo'
+
+    @staticmethod
+    def default_amount():
+        return Decimal(0.0)
+
+    @staticmethod
+    def default_utilizado():
+        return Decimal(0.0)
+
+    @staticmethod
+    def default_balance():
+        return Decimal(0.0)
+
+    @staticmethod
+    def default_currency():
+        Company = Pool().get('company.company')
+        company_id = Transaction().context.get('company')
+        if company_id:
+            return Company(company_id).currency.id
+
+    @staticmethod
+    def default_company():
+        return Transaction().context.get('company')
+
+    @staticmethod
+    def default_journal():
+        pool = Pool()
+        Journal = pool.get('account.journal')
+        journal_r = Journal.search([('type', '=', 'revenue')])
+        for j in journal_r:
+            return j.id
+
+    @staticmethod
+    def default_date():
+        Date = Pool().get('ir.date')
+        return Date.today()
+
+    @staticmethod
+    def default_vencimiento():
+        Date = Pool().get('ir.date')
+        return Date.today()
+
+    def set_number(self):
+        pool = Pool()
+        Configuration = pool.get('account.configuration')
+        sequence_advanced = None
+        if Configuration(1).sequence_advanced:
+                sequence_advanced = Configuration(1).sequence_advanced
+
+        if sequence_advanced:
+            if len(str(sequence_advanced)) == 1:
+                number = '00000000'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 2:
+                number = '0000000'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 3:
+                number = '000000'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 4:
+                number = '00000'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 5:
+                number = '0000'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 6:
+                number = '000'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 7:
+                number = '00'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 8:
+                number = '0'+str(sequence_advanced)
+            elif len(str(sequence_advanced)) == 9:
+                number = +str(sequence_advanced)
+            configuration = Configuration(1)
+            configuration.sequence_advanced = sequence_advanced + 1
+            configuration.save()
+        vals = {'number': number}
+        self.write([self], vals)
+
+    def get_amount2words(self, value):
+            if conversor:
+                return (conversor.cardinal(int(value))).upper()
+            else:
+                return ''
+
+    def prepare_move_lines(self):
+
+        pool = Pool()
+        Period = pool.get('account.period')
+        Move = pool.get('account.move')
+        MoveLine = pool.get('account.move.line')
+        ListAdvanced = pool.get('sale.list_advanced')
+        original = Decimal(0.0)
+        unreconcilied = Decimal(0.0)
+        paid_amount = Decimal(0.0)
+
+        residual_amount = Decimal(0.0)
+        name = None
+        invoice_d = None
+        listadvanced = ListAdvanced()
+
+        if not self.amount > Decimal("0.0"):
+            self.raise_user_error('No ha ingresado el monto del Anticipo')
+
+        all_list_advanced = ListAdvanced.search([('party', '=', self.party)])
+
+        if all_list_advanced:
+            for list_advanced in all_list_advanced:
+                listadvanced = list_advanced
+        else:
+            listadvanced.party = self.party
+            listadvanced.save()
+
+        listadvanced.advanced_inicial = listadvanced.advanced_inicial  + self.amount
+        #listadvanced.advanced_balance = listadvanced.advanced_balance + self.amount
+        listadvanced.save()
+
+        self.advanced = listadvanced
+        self.balance = self.amount
+        self.save()
+
+        Configuration = pool.get('account.configuration')
+
+        if Configuration(1).default_account_advanced:
+            account_advanced = Configuration(1).default_account_advanced
+        else:
+            self.raise_user_error('No ha configurado la cuenta por defecto para anticipos.'
+            '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        if self.pay == "efectivo":
+            if Configuration(1).default_account_e:
+                account_pay = Configuration(1).default_account_e
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para efectivo.'
+                '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        elif self.pay == "cheque":
+            if Configuration(1).default_account_c:
+                account_pay = Configuration(1).default_account_c
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para cheque.'
+                '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        elif self.pay == "transferencia":
+            if  Configuration(1).default_account_t:
+                account_pay = Configuration(1).default_account_t
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para transferencia.'
+                '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        elif self.pay == "tarjeta":
+            if  Configuration(1).default_account_t_c:
+                account_pay = Configuration(1).default_account_t_c
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para transferencia.'
+                '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        elif self.pay == "deposito":
+            if  Configuration(1).default_account_d:
+                account_pay = Configuration(1).default_account_d
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para deposito.'
+                '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        elif self.pay == "fuente":
+            if  Configuration(1).default_account_wf:
+                account_pay = Configuration(1).default_account_wf
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para retencion en la fuente.'
+                '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        elif self.pay == "iva":
+            if  Configuration(1).default_account_wi:
+                account_pay = Configuration(1).default_account_wi
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para retencion de IVA.'
+                '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+        move_lines_new = []
+        move, = Move.create([{
+            'period': Period.find(self.company.id, date=self.date),
+            'journal': self.journal,
+            'date': self.date,
+            'origin': str(self),
+        }])
+
+        move_lines_new.append({
+            'description': "",
+            'debit': self.amount,
+            'credit': Decimal(0.0),
+            'account': account_pay.id,
+            'move': move.id,
+            'journal': self.journal,
+            'period': Period.find(self.company.id, date=self.date),
+        })
+        move_lines_new.append({
+            'description': "",
+            'debit': Decimal(0.0),
+            'credit': self.amount,
+            'account': account_advanced.id,
+            'party' : self.party.id,
+            'move': move.id,
+            'journal': self.journal,
+            'period': Period.find(self.company.id, date=self.date),
+        })
+        created_lines = MoveLine.create(move_lines_new)
+        Move.post([move])
+
+        self.move = move
+        self.save()
+
+    @classmethod
+    @ModelView.button
+    def post(cls, advanceds):
+        for advanced in advanceds:
+            advanced.prepare_move_lines()
+            advanced.set_number()
+        cls.write(advanceds, {'state': 'posted'})
+
+class AdvancedReport(Report):
+    __name__ = 'sale.advanced_report'
+
+    @classmethod
+    def parse(cls, report, records, data, localcontext):
+        pool = Pool()
+        User = pool.get('res.user')
+        advanced = records[0]
+        fecha = advanced.date
+        company = advanced.company
+        if company.timezone:
+            timezone = pytz.timezone(company.timezone)
+            dt = datetime.now()
+            hora = datetime.astimezone(dt.replace(tzinfo=pytz.utc), timezone)
+
+        d = str(advanced.amount)
+        if '.' in d:
+            decimales = d[-2:]
+            if decimales[0] == '.':
+                 decimales = decimales[1]+'0'
+        else:
+            decimales = '00'
+
+        if advanced.amount and conversor:
+            amount_to_pay_words = advanced.get_amount2words(advanced.amount)
+
+
+        user = User(Transaction().user)
+        localcontext['user'] = user
+        localcontext['company'] = user.company
+        localcontext['fecha'] = fecha.strftime('%d/%m/%Y')
+        localcontext['hora'] = hora.strftime('%H:%M:%S')
+        localcontext['fecha_im'] = hora.strftime('%d/%m/%Y')
+        localcontext['amount_to_pay_words'] = amount_to_pay_words
+        localcontext['decimales'] = decimales
+
+        return super(AdvancedReport, cls).parse(report, records, data,
+                localcontext=localcontext)
 
 class SalePaymentForm():
     'Sale Payment Form'
@@ -44,6 +487,8 @@ class SalePaymentForm():
         'invisible': ~Eval('utilizar_anticipo', True)
     })
 
+    devolver_restante = fields.Boolean('Devolver valor restante', help="Devolver valor restante en efectivo")
+
     @classmethod
     def __setup__(cls):
         super(SalePaymentForm, cls).__setup__()
@@ -51,6 +496,10 @@ class SalePaymentForm():
     @staticmethod
     def default_restante():
         return Decimal(0.0)
+
+    @staticmethod
+    def default_devolver_restante():
+        return False
 
     @fields.depends('payment_amount', 'anticipo', 'utilizar_anticipo', 'restante')
     def on_change_utilizar_anticipo(self):
@@ -98,12 +547,13 @@ class WizardSalePayment(Wizard):
         MoveLine = pool.get('account.move.line')
         InvoiceAccountMoveLine = pool.get('account.invoice-account.move.line')
         amount_a = Decimal(0.0)
-        account_types = ['receivable']
+        account_types = ['receivable', 'payable']
 
         lines_credits = []
 
         move_lines = MoveLine.search([
             ('party', '=', sale.party),
+            ('description', '=', ""),
             ('account.kind', 'in', account_types),
             ('state', '=', 'valid'),
             ('reconciliation', '=', None),
@@ -116,9 +566,10 @@ class WizardSalePayment(Wizard):
             if invoice:
                 continue
             if line.credit:
-                line_type = 'cr'
-                amount_a = amount_a + line.credit
-                lines_credits.append(str(line.id) +',')
+                if 'sale.advanced' in str(line.move.origin):
+                    line_type = 'cr'
+                    amount_a = amount_a + line.credit
+                    lines_credits.append(str(line.id) +',')
 
         ModelData = pool.get('ir.model.data')
         User = pool.get('res.user')
@@ -281,7 +732,7 @@ class WizardSalePayment(Wizard):
             self.raise_user_error('No se puede dar credito a consumidor final, monto a pagar no puede ser %s', form.payment_amount)
 
         if sale.total_amount > 200 and form.party.vat_number == '9999999999999':
-            self.raise_user_error('La factura supera los $200 de importe total, por cuanto no puede ser emitida a nombre de CONSUMIDOR FINAL')
+            self.raise_user_error('La factura supera los $200 de importe total, no puede ser emitida a nombre de CONSUMIDOR FINAL')
 
         if form.credito == True and form.payment_amount == sale.total_amount:
             self.raise_user_error('No puede pagar el monto total %s en una venta a credito', form.payment_amount)
@@ -290,6 +741,16 @@ class WizardSalePayment(Wizard):
             self.raise_user_warning('not_credit%s' % sale.id,
                    u'Esta seguro que desea abonar $%s '
                 'del valor total $%s, de la venta al CONTADO.', (form.payment_amount, sale.total_amount))
+
+        if form.restante > Decimal(0.0) and form.devolver_restante == True:
+            self.raise_user_warning('devolucion%s' % sale.id,
+                   u'Esta seguro que desea devolver $%s '
+                'en efectivo.', (form.restante))
+
+        if form.restante > Decimal(0.0) and form.devolver_restante == False:
+            self.raise_user_warning('anticipo%s' % sale.id,
+                   u'Esta seguro que desea dejar $%s '
+                'como anticipo del Cliente %s.', (form.restante, sale.party.name))
 
         if form.tipo_p == 'cheque':
             sale.tipo_p = form.tipo_p
@@ -346,6 +807,55 @@ class WizardSalePayment(Wizard):
             payment.save()
 
         if sale.acumulativo != True:
+            if sale.total_amount < Decimal(0.0):
+                move_lines_dev= []
+                line_move__dev_ids = []
+                reconcile_lines_dev_advanced = []
+
+                journal_r = Journal.search([('type', '=', 'revenue')])
+                for j in journal_r:
+                    journal_sale = j.id
+
+                move_dev, = Move.create([{
+                    'period': Period.find(sale.company.id, date=sale.sale_date),
+                    'journal': journal_sale,
+                    'date': sale.sale_date,
+                    'origin': str(sale),
+                    'description': 'ajustes '+ str(sale.description),
+                }])
+
+                move_lines_dev.append({
+                    'description': 'ajustes '+ str(sale.description),
+                    'debit': Decimal(0.0),
+                    'credit': sale.total_amount * (-1),
+                    'account': sale.party.account_receivable.id,
+                    'move': move_dev.id,
+                    'party': sale.party.id,
+                    'journal': journal_sale,
+                    'period': Period.find(sale.company.id, date=sale.sale_date),
+                })
+
+                move_lines_dev.append({
+                    'description':  'ajustes '+ str(sale.description),
+                    'debit': sale.total_amount * (-1),
+                    'credit': Decimal(0.0),
+                    'account': sale.party.account_receivable.id,
+                    'move': move_dev.id,
+                    'party': sale.party.id,
+                    'journal': journal_sale,
+                    'period': Period.find(sale.company.id, date=sale.sale_date),
+                })
+
+                created_lines_dev = MoveLine.create(move_lines_dev)
+                Move.post([move_dev])
+
+                sale.devolucion = True
+                sales_d = Sale.search([('description', '=', sale.description)])
+                for sale_d in sales_d:
+                    sale_d.devolucion = True
+                    sale_d.referencia_de_factura = sale.description
+                    sale_d.save()
+
             pago_en_cero = False
             utiliza_anticipo_venta = False
             sale.formas_pago_sri = form.tipo_pago_sri
@@ -357,6 +867,7 @@ class WizardSalePayment(Wizard):
             modules = None
             Module = pool.get('ir.module.module')
             modules = Module.search([('name', '=', 'nodux_sale_payment_advanced_payment'), ('state', '=', 'installed')])
+
             if modules:
                 move_invoice = None
                 for i in invoices:
@@ -369,7 +880,7 @@ class WizardSalePayment(Wizard):
                 MoveLine = pool.get('account.move.line')
                 InvoiceAccountMoveLine = pool.get('account.invoice-account.move.line')
                 amount_a = Decimal(0.0)
-                account_types = ['receivable']
+                account_types = ['receivable', 'payable']
 
                 move_lines = MoveLine.search([
                     ('party', '=', sale.party),
@@ -384,7 +895,7 @@ class WizardSalePayment(Wizard):
                     for l in lineas_anticipo_conciliar:
                         if str(line.id) == l:
                             description = sale.reference
-                            new_advanced = form.anticipo-form.restante
+                            new_advanced = form.anticipo - form.restante
                             line.credit = Decimal(new_advanced)
                             line.save()
                             move = line.move
@@ -394,7 +905,56 @@ class WizardSalePayment(Wizard):
                                     m.debit = Decimal(new_advanced)
                                     m.save()
                             move.save()
-                if form.restante > Decimal(0.0):
+
+                Configuration = pool.get('account.configuration')
+
+                if form.restante > Decimal(0.0) and form.devolver_restante == False:
+                    pool = Pool()
+                    ListAdvanced = pool.get('sale.list_advanced')
+                    all_list_advanced = ListAdvanced.search([('party', '=', sale.party)])
+                    restante = form.restante
+                    if all_list_advanced:
+                        for list_advanced in all_list_advanced:
+                            for line in list_advanced.lines:
+                                if line.amount != line.utilizado:
+                                    if restante > line.balance and line.balance > Decimal(0.0) and restante > Decimal(0.0):
+                                        monto_balance = line.balance
+                                        line.utilizado = line.utilizado + monto_balance
+                                        line.balance = line.balance - monto_balance
+                                        line.save()
+                                        restante = restante - monto_balance
+
+                                    elif restante < line.balance and line.balance > Decimal(0.0) and restante > Decimal(0.0):
+                                        monto_balance = restante
+                                        line.utilizado = line.utilizado + monto_balance
+                                        line.balance = line.balance - monto_balance
+                                        line.save()
+                                        restante = restante - monto_balance
+
+                    """
+                    Advanced = pool.get('sale.advanced')
+                    advanced = Advanced()
+                    advanced.party = sale.party.id
+                    advanced.date = sale.sale_date
+                    advanced.comment = "Anticipo de cliente"
+                    if sale.employee:
+                        advanced.employee = sale.employee.id
+                    advanced.amount = form.restante
+                    advanced.pay = "efectivo"
+                    advanced.save()
+                    advanced.prepare_move_lines()
+                    advanced.set_number()
+                    advanced.state = "posted"
+                    advanced.save()
+                    """
+
+                if form.restante > Decimal(0.0) and form.devolver_restante == True:
+                    if Configuration(1).default_account_return:
+                        account_return = Configuration(1).default_account_return
+                    else:
+                        self.raise_user_error('No ha configurado la cuenta para devolucion de anticipos.'
+                        '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
                     Journal = pool.get('account.journal')
                     journal_r = Journal.search([('type', '=', 'revenue')])
                     for j in journal_r:
@@ -411,7 +971,6 @@ class WizardSalePayment(Wizard):
                         'date': sale.sale_date,
                         'origin': str(sale),
                     }])
-
                     move_lines_new.append({
                         'description': invoice_advanced.number,
                         'debit': Decimal(0.0),
@@ -422,21 +981,17 @@ class WizardSalePayment(Wizard):
                         'journal': journal_sale,
                         'period': Period.find(sale.company.id, date=sale.sale_date),
                     })
-
                     move_lines_new.append({
                         'description': invoice_advanced.number,
                         'debit': form.restante,
                         'credit': Decimal(0.0),
-                        'account': 326,
+                        'account': account_return.id,
                         'move': move.id,
                         'journal': journal_sale,
                         'period': Period.find(sale.company.id, date=sale.sale_date),
                     })
                     created_lines = MoveLine.create(move_lines_new)
-
-
                     Move.post([move])
-
 
             if sale.shop.lote != None:
                 lote = sale.shop.lote
@@ -462,7 +1017,6 @@ class WizardSalePayment(Wizard):
                     invoice.get_detail_element()
                     invoice.action_generate_invoice()
                     invoice.connect_db()
-
 
             sale.description = sale.reference
             sale.save()

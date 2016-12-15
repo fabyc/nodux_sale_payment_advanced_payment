@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!-- This file is part of the nodux_account_voucher_ec module for Tryton.
+The COPYRIGHT file at the top level of this repository contains
+the full copyright notices and license terms. -->
+<form string="Listado de Anticipos" col="8">
+    <label name="party"/>
+    <field name="party"/>
+    <newline/>
+    <field name="lines" colspan="8"
+        view_ids="nodux_sale_payment_advanced_payment.advanced_line_view_tree_sequence"/>
+    <newline/>
+    <label name="advanced_inicial"/>
+    <field name="advanced_inicial"/>
+    <label name="advanced_utilizado"/>
+    <field name="advanced_utilizado"/>
+    <label name="advanced_balance"/>
+    <field name="advanced_balance"/>
+    <newline/>
+
+</form>

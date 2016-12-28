@@ -291,6 +291,12 @@ class Advanced(ModelSQL, ModelView):
             configuration = Configuration(1)
             configuration.sequence_advanced = sequence_advanced + 1
             configuration.save()
+        else:
+            number = '000000001'
+            configuration = Configuration(1)
+            configuration.sequence_advanced = 2
+            configuration.save()
+
         vals = {'number': number}
         self.write([self], vals)
 

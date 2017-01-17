@@ -46,9 +46,17 @@ msgctxt "field:sale.advanced,account:"
 msgid "Account"
 msgstr "Cuenta"
 
+msgctxt "field:sale.advanced,advanced:"
+msgid "List Advanced"
+msgstr "Listado Anticipos"
+
 msgctxt "field:sale.advanced,amount:"
 msgid "Payment"
 msgstr "Pago"
+
+msgctxt "field:sale.advanced,balance:"
+msgid "Balance"
+msgstr "Saldo"
 
 msgctxt "field:sale.advanced,bank:"
 msgid "Bank"
@@ -90,6 +98,10 @@ msgctxt "field:sale.advanced,journal:"
 msgid "Journal"
 msgstr "Libro Diario"
 
+msgctxt "field:sale.advanced,move:"
+msgid "Move"
+msgstr "Asiento Contable"
+
 msgctxt "field:sale.advanced,number:"
 msgid "Number"
 msgstr "Número"
@@ -114,6 +126,10 @@ msgctxt "field:sale.advanced,state:"
 msgid "State"
 msgstr "Estado"
 
+msgctxt "field:sale.advanced,utilizado:"
+msgid "Utilizado"
+msgstr ""
+
 msgctxt "field:sale.advanced,vencimiento:"
 msgid "Date Out"
 msgstr "Fecha de Vencimiento"
@@ -123,6 +139,54 @@ msgid "Write Date"
 msgstr "Modificado por usuario"
 
 msgctxt "field:sale.advanced,write_uid:"
+msgid "Write User"
+msgstr "Usuario modificación"
+
+msgctxt "field:sale.list_advanced,advanced_balance:"
+msgid "Balance"
+msgstr "Saldo"
+
+msgctxt "field:sale.list_advanced,advanced_inicial:"
+msgid "Valor Anticipo"
+msgstr ""
+
+msgctxt "field:sale.list_advanced,advanced_utilizado:"
+msgid "Utilizado"
+msgstr ""
+
+msgctxt "field:sale.list_advanced,create_date:"
+msgid "Create Date"
+msgstr "Fecha de Creación"
+
+msgctxt "field:sale.list_advanced,create_uid:"
+msgid "Create User"
+msgstr "Usuario creación"
+
+msgctxt "field:sale.list_advanced,id:"
+msgid "ID"
+msgstr "Identificador"
+
+msgctxt "field:sale.list_advanced,lines:"
+msgid "Lines"
+msgstr "Transacciones"
+
+msgctxt "field:sale.list_advanced,party:"
+msgid "Party"
+msgstr "Cliente"
+
+msgctxt "field:sale.list_advanced,rec_name:"
+msgid "Name"
+msgstr "Nombre"
+
+msgctxt "field:sale.list_advanced,state:"
+msgid "State"
+msgstr "Estado"
+
+msgctxt "field:sale.list_advanced,write_date:"
+msgid "Write Date"
+msgstr "Modificado por usuario"
+
+msgctxt "field:sale.list_advanced,write_uid:"
 msgid "Write User"
 msgstr "Usuario modificación"
 
@@ -155,20 +219,248 @@ msgid "Devolver valor restante en efectivo"
 msgstr ""
 
 msgctxt "model:ir.action,name:act_advanced_form"
-msgid "Anticipos"
+msgid "Nuevo Anticipo"
 msgstr ""
 
-msgctxt "model:ir.action.act_window.domain,name:act_advanced_form_domain_all"
+msgctxt "model:ir.action,name:act_list_advanced_form"
+msgid "Listado de Anticipos"
+msgstr ""
+
+msgctxt "model:ir.action,name:report_advanced"
+msgid "Reporte Anticipo"
+msgstr ""
+
+msgctxt "model:ir.action,name:report_list_advanced"
+msgid "Historial de Anticipo"
+msgstr ""
+
+msgctxt "model:ir.action.act_window.domain,name:"
 msgid "All"
 msgstr "Todos"
 
 msgctxt "model:ir.ui.menu,name:menu_advanced"
-msgid "Anticipos"
+msgid "Nuevo Anticipo"
+msgstr ""
+
+msgctxt "model:ir.ui.menu,name:menu_list_advanced"
+msgid "Listado de Anticipos"
 msgstr ""
 
 msgctxt "model:sale.advanced,name:"
 msgid "Advanced"
 msgstr "Anticipo"
+
+msgctxt "model:sale.list_advanced,name:"
+msgid "List Advanced"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid ","
+msgstr ","
+
+msgctxt "odt:sale.advanced_report:"
+msgid "/"
+msgstr "/"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "100 DOLARES"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid ":"
+msgstr ":"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "ANTICIPO DE CLIENTE No."
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "BANCO"
+msgstr "BANCO"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "CHEQUE"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "CRÉDITO"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "CUENTA"
+msgstr "CUENTA"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "Cliente"
+msgstr "CLIENTE"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "DEPÓSITO"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "Dirección:"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "EFECTIVO"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "ENTREGUE CONFORME"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "FORMA DE PAGO"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "Fecha"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "La cantidad de:"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "NOTA"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "NOTA:"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "Pag."
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "RECIBI CONFORME"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "REFERENCIA"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "RETENCIÓN DEL IVA"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "RETENCIÓN EN LA FUENTE"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "RUC"
+msgstr "RUC"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "RUC/C.I.:"
+msgstr "RUC/C.I.:"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "TARJETA DE"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "TOTAL"
+msgstr "TOTAL"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "TRANSFERENCIA"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "VALOR"
+msgstr "VALOR"
+
+msgctxt "odt:sale.advanced_report:"
+msgid "VENCIMIENTO"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "VENDEDOR:"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "______________________________________"
+msgstr ""
+
+msgctxt "odt:sale.advanced_report:"
+msgid "de"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid ":"
+msgstr ":"
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "BALANCE"
+msgstr "BALANCE"
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "Cliente"
+msgstr "CLIENTE"
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "Dirección:"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "ENTREGUE CONFORME"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "FECHA"
+msgstr "FECHA"
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "H"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "ISTORIAL DE ANTICIPOS"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "NOTA"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "No."
+msgstr "No."
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "Pag."
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "RECIBI CONFORME"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "RUC"
+msgstr "RUC"
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "RUC/C.I.:"
+msgstr "RUC/C.I.:"
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "TOTAL:"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "UTILIZADO"
+msgstr ""
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "VALOR"
+msgstr "VALOR"
+
+msgctxt "odt:sale.list_advanced_report:"
+msgid "de"
+msgstr ""
 
 msgctxt "selection:sale.advanced,pay:"
 msgid "Cheque"
@@ -206,9 +498,17 @@ msgctxt "selection:sale.advanced,state:"
 msgid "Posted"
 msgstr "Contabilizado"
 
+msgctxt "selection:sale.list_advanced,state:"
+msgid "Posted"
+msgstr "Contabilizado"
+
 msgctxt "view:account.configuration:"
 msgid "Anticipos"
 msgstr ""
+
+msgctxt "view:sale.advanced:"
+msgid "Advanced"
+msgstr "Anticipo"
 
 msgctxt "view:sale.advanced:"
 msgid "Voucher"
@@ -216,4 +516,8 @@ msgstr "Comprobantes"
 
 msgctxt "view:sale.advanced:"
 msgid "_Generar Anticipo"
+msgstr ""
+
+msgctxt "view:sale.list_advanced:"
+msgid "Listado de Anticipos"
 msgstr ""

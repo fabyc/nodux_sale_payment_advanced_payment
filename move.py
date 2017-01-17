@@ -21,6 +21,16 @@ class Move:
     def _get_origin(cls):
         return super(Move, cls)._get_origin() + ['sale.sale', 'sale.advanced']
 
+    def check_date(self):
+        if "advanced" in str(self.origin).lower():
+            pass
+        else:
+            if (self.date < self.period.start_date
+                    or self.date > self.period.end_date):
+                self.raise_user_error('date_outside_period', {
+                            'move': self.rec_name,
+                            })
+
 
 class Line:
     __name__ = 'account.move.line'

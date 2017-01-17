@@ -887,7 +887,7 @@ class WizardSalePayment(Wizard):
                 InvoiceAccountMoveLine = pool.get('account.invoice-account.move.line')
                 amount_a = Decimal(0.0)
                 account_types = ['receivable', 'payable']
-
+                """
                 move_lines = MoveLine.search([
                     ('party', '=', sale.party),
                     ('account.kind', 'in', account_types),
@@ -901,7 +901,7 @@ class WizardSalePayment(Wizard):
                     for l in lineas_anticipo_conciliar:
                         if str(line.id) == l:
                             description = sale.reference
-                            new_advanced = form.anticipo - form.restante
+                            new_advanced = form.anticipo-form.restante
                             line.credit = Decimal(new_advanced)
                             line.save()
                             move = line.move
@@ -911,93 +911,176 @@ class WizardSalePayment(Wizard):
                                     m.debit = Decimal(new_advanced)
                                     m.save()
                             move.save()
-
+                """
                 Configuration = pool.get('account.configuration')
 
-                if form.restante > Decimal(0.0) and form.devolver_restante == False:
+                if form.utilizar_anticipo == True:
+
+                    utiliza_anticipo_venta = True
+                    if Configuration(1).default_account_return:
+                        account_advanced = Configuration(1).default_account_advanced
+
                     pool = Pool()
                     ListAdvanced = pool.get('sale.list_advanced')
                     all_list_advanced = ListAdvanced.search([('party', '=', sale.party)])
-                    restante = form.restante
-                    if all_list_advanced:
-                        for list_advanced in all_list_advanced:
-                            for line in list_advanced.lines:
-                                if line.amount != line.utilizado:
-                                    if restante > line.balance and line.balance > Decimal(0.0) and restante > Decimal(0.0):
-                                        monto_balance = line.balance
-                                        line.utilizado = line.utilizado + monto_balance
-                                        line.balance = line.balance - monto_balance
-                                        line.save()
-                                        restante = restante - monto_balance
+                    move_lines_new_advanced = []
+                    if form.restante == Decimal(0.0):
+                        pagar = form.anticipo
+                        if all_list_advanced:
+                            for list_advanced in all_list_advanced:
+                                for line in list_advanced.lines:
+                                    if line.amount != line.utilizado:
+                                        if pagar > line.balance and line.balance > Decimal(0.0) and pagar > Decimal(0.0):
+                                            monto_balance = line.balance
+                                            line.utilizado = line.utilizado + monto_balance
+                                            line.balance = line.balance - monto_balance
+                                            line.save()
+                                            pagar = pagar - monto_balance
+                                            for linem in line.move.lines:
+                                                if linem.party and linem.credit > Decimal(0.0) and linem.reconciliation == None and linem.description == "":
+                                                    linem.description = "used"+str(sale.reference)
+                                                    linem.save()
+                                            move = line.move
+                                            move.description = sale.reference
+                                            move.save()
 
-                                    elif restante < line.balance and line.balance > Decimal(0.0) and restante > Decimal(0.0):
-                                        monto_balance = restante
-                                        line.utilizado = line.utilizado + monto_balance
-                                        line.balance = line.balance - monto_balance
-                                        line.save()
-                                        restante = restante - monto_balance
+                                        elif pagar < line.balance and line.balance > Decimal(0.0) and pagar > Decimal(0.0):
+                                            monto_balance = pagar
+                                            line.utilizado = line.utilizado + monto_balance
+                                            line.balance = line.balance - monto_balance
+                                            line.save()
+                                            pagar = pagar - monto_balance
 
-                    """
-                    Advanced = pool.get('sale.advanced')
-                    advanced = Advanced()
-                    advanced.party = sale.party.id
-                    advanced.date = sale.sale_date
-                    advanced.comment = "Anticipo de cliente"
-                    if sale.employee:
-                        advanced.employee = sale.employee.id
-                    advanced.amount = form.restante
-                    advanced.pay = "efectivo"
-                    advanced.save()
-                    advanced.prepare_move_lines()
-                    advanced.set_number()
-                    advanced.state = "posted"
-                    advanced.save()
-                    """
+                                            for linem in move.lines:
+                                                if linem.party and linem.credit > Decimal(0.0) and linem.reconciliation == None and linem.description == "":
+                                                    linem.credit = linem.credit - monto_balance
+                                                    linem.save()
+                                            move = line.move
+                                            move.description = sale.reference
+                                            move.save()
 
-                if form.restante > Decimal(0.0) and form.devolver_restante == True:
-                    if Configuration(1).default_account_return:
-                        account_return = Configuration(1).default_account_return
-                    else:
-                        self.raise_user_error('No ha configurado la cuenta para devolucion de anticipos.'
-                        '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+                                            move_lines_new_advanced.append({
+                                                'description': "used"+str(sale.reference),
+                                                'debit': Decimal(0.0),
+                                                'credit': monto_balance,
+                                                'account': account_advanced.id,
+                                                'party' : sale.party.id,
+                                                'move': line.move.id,
+                                                'journal': line.move.journal.id,
+                                                'period': Period.find(sale.company.id, date=sale.sale_date),
+                                            })
+                                            created_lines = MoveLine.create(move_lines_new_advanced)
+                                            Move.post([line.move])
 
-                    Journal = pool.get('account.journal')
-                    journal_r = Journal.search([('type', '=', 'revenue')])
-                    for j in journal_r:
-                        journal_sale = j.id
-                    pago_en_cero = True
-                    utiliza_anticipo_venta = True
-                    #crear_nuevo_asiento
-                    move_lines_new = []
-                    line_move_ids = []
-                    reconcile_lines_advanced = []
-                    move, = Move.create([{
-                        'period': Period.find(sale.company.id, date=sale.sale_date),
-                        'journal': journal_sale,
-                        'date': sale.sale_date,
-                        'origin': str(sale),
-                    }])
-                    move_lines_new.append({
-                        'description': invoice_advanced.number,
-                        'debit': Decimal(0.0),
-                        'credit': form.restante,
-                        'account': invoice_advanced.party.account_receivable.id,
-                        'move': move.id,
-                        'party': sale.party.id,
-                        'journal': journal_sale,
-                        'period': Period.find(sale.company.id, date=sale.sale_date),
-                    })
-                    move_lines_new.append({
-                        'description': invoice_advanced.number,
-                        'debit': form.restante,
-                        'credit': Decimal(0.0),
-                        'account': account_return.id,
-                        'move': move.id,
-                        'journal': journal_sale,
-                        'period': Period.find(sale.company.id, date=sale.sale_date),
-                    })
-                    created_lines = MoveLine.create(move_lines_new)
-                    Move.post([move])
+                                        elif pagar == line.balance and line.balance > Decimal(0.0) and pagar > Decimal(0.0):
+                                            monto_balance = line.balance
+                                            line.utilizado = line.utilizado + monto_balance
+                                            line.balance = line.balance - monto_balance
+                                            line.save()
+                                            pagar = pagar - monto_balance
+                                            for linem in line.move.lines:
+                                                if linem.party and linem.credit > Decimal(0.0) and linem.reconciliation == None and linem.description == "":
+                                                    linem.description = "used"+str(sale.reference)
+                                                    linem.save()
+                                            move = line.move
+                                            move.description = sale.reference
+                                            move.save()
+
+                    if form.restante > Decimal(0.0) and form.devolver_restante == False:
+                        pago_en_cero = True
+                        restante = form.restante
+                        pagar = form.anticipo - form.restante
+                        if all_list_advanced:
+                            for list_advanced in all_list_advanced:
+                                for line in list_advanced.lines:
+                                    if line.amount != line.utilizado:
+                                        if pagar > line.balance and line.balance > Decimal(0.0) and pagar > Decimal(0.0):
+                                            monto_balance = line.balance
+                                            line.utilizado = line.utilizado + monto_balance
+                                            line.balance = line.balance - monto_balance
+                                            line.save()
+                                            pagar = pagar - monto_balance
+                                            for linem in line.move.lines:
+                                                if linem.party and linem.credit > Decimal(0.0) and linem.reconciliation == None and linem.description == "":
+                                                    linem.description = "used"+str(sale.reference)
+                                                    linem.save()
+                                            move = line.move
+                                            move.description = sale.reference
+                                            move.save()
+
+                                        elif pagar < line.balance and line.balance > Decimal(0.0) and pagar > Decimal(0.0):
+                                            monto_balance = pagar
+                                            line.utilizado = line.utilizado + monto_balance
+                                            line.balance = line.balance - monto_balance
+                                            line.save()
+                                            pagar = pagar - monto_balance
+
+                                            for linem in line.move.lines:
+                                                if linem.party and linem.credit > Decimal(0.0) and linem.reconciliation == None and linem.description == "":
+                                                    linem.credit = linem.credit - monto_balance
+                                                    linem.save()
+
+                                            move_lines_new_advanced.append({
+                                                'description': "used"+str(sale.reference),
+                                                'debit': Decimal(0.0),
+                                                'credit': monto_balance,
+                                                'account': account_advanced.id,
+                                                'party' : sale.party.id,
+                                                'move': line.move.id,
+                                                'journal': line.move.journal.id,
+                                                'period': Period.find(sale.company.id, date=sale.sale_date),
+                                            })
+                                            created_lines = MoveLine.create(move_lines_new_advanced)
+                                            Move.post([line.move])
+                                            move = line.move
+                                            move.description = sale.reference
+                                            move.save()
+
+
+                    if form.restante > Decimal(0.0) and form.devolver_restante == True:
+                        if Configuration(1).default_account_return:
+                            account_return = Configuration(1).default_account_return
+                        else:
+                            self.raise_user_error('No ha configurado la cuenta para devolucion de anticipos.'
+                            '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+                        Journal = pool.get('account.journal')
+                        journal_r = Journal.search([('type', '=', 'revenue')])
+                        for j in journal_r:
+                            journal_sale = j.id
+                        pago_en_cero = True
+                        #crear_nuevo_asiento
+                        move_lines_new = []
+                        line_move_ids = []
+                        reconcile_lines_advanced = []
+                        move, = Move.create([{
+                            'period': Period.find(sale.company.id, date=sale.sale_date),
+                            'journal': journal_sale,
+                            'date': sale.sale_date,
+                            'origin': str(sale),
+                        }])
+                        move_lines_new.append({
+                            'description': invoice_advanced.number,
+                            'debit': Decimal(0.0),
+                            'credit': form.restante,
+                            'account': invoice_advanced.party.account_receivable.id,
+                            'move': move.id,
+                            'party': sale.party.id,
+                            'journal': journal_sale,
+                            'period': Period.find(sale.company.id, date=sale.sale_date),
+                        })
+                        move_lines_new.append({
+                            'description': invoice_advanced.number,
+                            'debit': form.restante,
+                            'credit': Decimal(0.0),
+                            'account': account_return.id,
+                            'move': move.id,
+                            'journal': journal_sale,
+                            'period': Period.find(sale.company.id, date=sale.sale_date),
+                        })
+                        created_lines = MoveLine.create(move_lines_new)
+                        Move.post([move])
+
 
             if sale.shop.lote != None:
                 lote = sale.shop.lote

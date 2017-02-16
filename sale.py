@@ -668,7 +668,9 @@ class WizardSalePayment(Wizard):
         if term_lines > 1:
             credito == True
         for date, amount in term_lines:
-            if date == Date.today():
+            #Se cambia menor o igual para PRUEBAS TONERS, y Date.today por sale_date
+            #if date < Date.today()
+            if date <= sale.sale_date:
                 if amount < 0 :
                     amount *=-1
                 payment_amount = amount
@@ -698,7 +700,6 @@ class WizardSalePayment(Wizard):
                     else:
                         if sale.state == "done":
                             to_pay = sale.total_amount * (-1)
-
         return {
             'journal': sale_device.journal.id
                 if sale_device.journal else None,
@@ -714,11 +715,17 @@ class WizardSalePayment(Wizard):
             }
 
     def transition_pay_(self):
+        print "Ingresa aqui advanced"
         pool = Pool()
+        Period = pool.get('account.period')
+        Move = pool.get('account.move')
+        Invoice = pool.get('account.invoice')
         Date = pool.get('ir.date')
         Sale = pool.get('sale.sale')
         Statement = pool.get('account.statement')
         StatementLine = pool.get('account.statement.line')
+        move_lines = []
+        line_move_ids = []
         form = self.start
         statements = Statement.search([
                 ('journal', '=', form.journal),
@@ -760,12 +767,89 @@ class WizardSalePayment(Wizard):
 
         if form.tipo_p == 'cheque':
             sale.tipo_p = form.tipo_p
-            sale.banco = form.banco
+            sale.bancos = form.bancos
             sale.numero_cuenta = form.numero_cuenta
             sale.fecha_deposito= form.fecha_deposito
             sale.titular = form.titular
             sale.numero_cheque = form.numero_cheque
-            sale.sale_date = date
+            move, = Move.create([{
+                'period': Period.find(sale.company.id, date=sale.sale_date),
+                'journal': 1,
+                'date': sale.sale_date,
+                'origin': str(sale),
+                'description': str(sale.id),
+            }])
+
+            postdated_lines = None
+            Configuration = pool.get('account.configuration')
+            if Configuration(1).default_account_check:
+                account_check = Configuration(1).default_account_check
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para Cheques. \nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+            move_lines.append({
+                'description' : str(sale.id),
+                'debit': form.payment_amount,
+                'credit': Decimal(0.0),
+                'account': account_check,
+                'move': move.id,
+                'journal': 1,
+                'period': Period.find(sale.company.id, date=sale.sale_date),
+            })
+            move_lines.append({
+                'description': str(sale.id),
+                'debit': Decimal(0.0),
+                'credit': form.payment_amount,
+                'account': sale.party.account_receivable.id,
+                'move': move.id,
+                'journal': 1,
+                'period': Period.find(sale.company.id, date=sale.sale_date),
+                'date': sale.sale_date,
+                'party': sale.party.id,
+            })
+
+            postdated_lines = []
+            if form.bancos:
+                pass
+            else:
+                self.raise_user_error('Ingrese el banco')
+
+            if form.numero_cheque:
+                pass
+            else:
+                self.raise_user_error('Ingrese el numero de cheque')
+
+            if form.numero_cuenta:
+                pass
+            else:
+                self.raise_user_error('Ingrese el numero de cuenta')
+
+            postdated_lines.append({
+                'reference': str(sale.id),
+                'name': str(sale.id),
+                'amount': Decimal(form.payment_amount),
+                'account': account_check,
+                'date_expire': sale.sale_date,
+                'date': sale.sale_date,
+                'num_check' : form.numero_cheque,
+                'num_account' : form.numero_cuenta,
+            })
+
+            if postdated_lines != None:
+                Postdated = pool.get('account.postdated')
+                postdated = Postdated()
+                for line in postdated_lines:
+                    date = line['date']
+                    postdated.postdated_type = 'check'
+                    postdated.reference = str(sale.id)
+                    postdated.party = sale.party
+                    postdated.post_check_type = 'receipt'
+                    postdated.journal = 1
+                    postdated.lines = postdated_lines
+                    postdated.state = 'draft'
+                    postdated.date = sale.sale_date
+                    postdated.save()
+            #sale.sale_date = date
             sale.save()
 
         if form.tipo_p == 'deposito':
@@ -774,7 +858,7 @@ class WizardSalePayment(Wizard):
             sale.numero_cuenta_deposito = form.numero_cuenta_deposito
             sale.fecha_deposito = form.fecha_deposito
             sale.numero_deposito= form.numero_deposito
-            sale.sale_date = date
+            #sale.sale_date = date
             sale.save()
 
         if form.tipo_p == 'tarjeta':
@@ -782,14 +866,89 @@ class WizardSalePayment(Wizard):
             sale.numero_tarjeta = form.numero_tarjeta
             sale.lote = form.lote
             sale.tarjeta = form.tarjeta
-            sale.sale_date = date
+            #sale.sale_date = date
+
+            move, = Move.create([{
+                'period': Period.find(sale.company.id, date=sale.sale_date),
+                'journal': 1,
+                'date': sale.sale_date,
+                'origin': str(sale),
+                'description': str(sale.id),
+            }])
+            Configuration = pool.get('account.configuration')
+            if Configuration(1).default_account_card:
+                account_card = Configuration(1).default_account_card
+            else:
+                self.raise_user_error('No ha configurado la cuenta por defecto para Tarjetas. \nDirijase a Financiero-Configuracion-Configuracion Contable')
+
+            move_lines.append({
+                'description' : str(sale.id),
+                'debit': form.payment_amount,
+                'credit': Decimal(0.0),
+                'account': account_card,
+                'move': move.id,
+                'journal': 1,
+                'period': Period.find(sale.company.id, date=sale.sale_date),
+            })
+            move_lines.append({
+                'description': str(sale.id),
+                'debit': Decimal(0.0),
+                'credit': form.payment_amount,
+                'account': sale.party.account_receivable.id,
+                'move': move.id,
+                'journal': 1,
+                'period': Period.find(sale.company.id, date=sale.sale_date),
+                'date': sale.sale_date,
+                'party': sale.party.id,
+            })
+            postdated_lines = []
+            if form.numero_tarjeta:
+                pass
+            else:
+                self.raise_user_error('Ingrese el numero de Tarjeta')
+
+            if form.tarjeta:
+                pass
+            else:
+                self.raise_user_error('Ingrese la Tarjeta')
+
+            if form.lote:
+                pass
+            else:
+                self.raise_user_error('Ingrese el no. de lote de la tarjeta')
+
+            postdated_lines.append({
+                'reference': str(sale.id),
+                'name': str(sale.id),
+                'amount': Decimal(form.payment_amount),
+                'account': account_card,
+                'date_expire': sale.sale_date,
+                'date': sale.sale_date,
+                'num_check' : form.numero_tarjeta,
+                'num_account' : form.lote,
+            })
+
+        if postdated_lines != None:
+            Postdated = pool.get('account.postdated')
+            postdated = Postdated()
+            for line in postdated_lines:
+                date = line['date']
+                postdated.postdated_type = 'card'
+                postdated.reference = str(sale.id)
+                postdated.party = sale.party
+                postdated.post_check_type = 'receipt'
+                postdated.journal = 1
+                postdated.lines = postdated_lines
+                postdated.state = 'draft'
+                postdated.date = sale.sale_date
+                postdated.save()
             sale.save()
 
         if form.tipo_p == 'efectivo':
             sale.tipo_p = form.tipo_p
             sale.recibido = form.recibido
             sale.cambio = form.cambio_cliente
-            sale.sale_date = date
+            #sale.sale_date = date
             sale.save()
 
         if not sale.reference:
@@ -803,7 +962,8 @@ class WizardSalePayment(Wizard):
         if form.payment_amount:
             payment = StatementLine(
                 statement=statements[0].id,
-                date=Date.today(),
+                #date=Date.today(),
+                date=sale.sale_date,
                 amount=form.payment_amount,
                 party=sale.party.id,
                 account=account,
@@ -912,6 +1072,7 @@ class WizardSalePayment(Wizard):
                                     m.save()
                             move.save()
                 """
+
                 Configuration = pool.get('account.configuration')
 
                 if form.utilizar_anticipo == True:

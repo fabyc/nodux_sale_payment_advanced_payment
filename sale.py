@@ -638,6 +638,8 @@ class WizardSalePayment(Wizard):
                 for line in sale.lines:
                     if line.product.type not in PRODUCT_TYPES:
                         continue
+                    elif sale.total_amount < Decimal(0.0):
+                        continue
                     else:
                         if line.product and line.product.id in quantities:
                             qty = quantities[line.product.id]
@@ -669,7 +671,7 @@ class WizardSalePayment(Wizard):
             credito == True
         for date, amount in term_lines:
             #Se cambia menor o igual para PRUEBAS TONERS, y Date.today por sale_date
-            #if date < Date.today()
+            #if date = Date.today()
             if date <= sale.sale_date:
                 if amount < 0 :
                     amount *=-1
@@ -928,20 +930,20 @@ class WizardSalePayment(Wizard):
                 'num_account' : form.lote,
             })
 
-        if postdated_lines != None:
-            Postdated = pool.get('account.postdated')
-            postdated = Postdated()
-            for line in postdated_lines:
-                date = line['date']
-                postdated.postdated_type = 'card'
-                postdated.reference = str(sale.id)
-                postdated.party = sale.party
-                postdated.post_check_type = 'receipt'
-                postdated.journal = 1
-                postdated.lines = postdated_lines
-                postdated.state = 'draft'
-                postdated.date = sale.sale_date
-                postdated.save()
+            if postdated_lines != None:
+                Postdated = pool.get('account.postdated')
+                postdated = Postdated()
+                for line in postdated_lines:
+                    date = line['date']
+                    postdated.postdated_type = 'card'
+                    postdated.reference = str(sale.id)
+                    postdated.party = sale.party
+                    postdated.post_check_type = 'receipt'
+                    postdated.journal = 1
+                    postdated.lines = postdated_lines
+                    postdated.state = 'draft'
+                    postdated.date = sale.sale_date
+                    postdated.save()
             sale.save()
 
         if form.tipo_p == 'efectivo':

@@ -544,6 +544,8 @@ class WizardSalePayment(Wizard):
         User = pool.get('res.user')
         SaleP = pool.get('sale.payment.form')
         sale = Sale(Transaction().context['active_id'])
+        if not(sale.sale_date):
+            self.raise_user_error('Ingrese fecha de venta')
         user = User(Transaction().user)
         sale_device = sale.sale_device or user.sale_device or False
         Date = pool.get('ir.date')
@@ -672,13 +674,16 @@ class WizardSalePayment(Wizard):
         for date, amount in term_lines:
             #Se cambia menor o igual para PRUEBAS TONERS, y Date.today por sale_date
             #if date = Date.today()
-            if date <= sale.sale_date:
-                if amount < 0 :
-                    amount *=-1
-                payment_amount = amount
+            if sale.sale_date:
+                if date <= sale.sale_date:
+                    if amount < 0 :
+                        amount *=-1
+                    payment_amount = amount
+                else:
+                    payment_amount = Decimal(0.0)
+                    credito = True
             else:
-                payment_amount = Decimal(0.0)
-                credito = True
+                self.raise_user_error('Ingrese la fecha de venta')
         if sale.paid_amount:
             amount = sale.total_amount - sale.paid_amount
         else:

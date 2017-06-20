@@ -557,6 +557,10 @@ class WizardSalePayment(Wizard):
         amount_a = Decimal(0.0)
         account_types = ['receivable', 'payable']
 
+        Module = pool.get('ir.module.module')
+        modulePSS = Module.search([('name', '=', 'sale_product_stock_shop'), ('state', '=', 'installed')])
+        moduleSPS = Module.search([('name', '=', 'sale_product_stock'), ('state', '=', 'installed')])
+
         lines_credits = []
 
         move_lines = MoveLine.search([
@@ -611,8 +615,9 @@ class WizardSalePayment(Wizard):
         else:
              self.raise_user_error('No ha creado un estado de cuenta para %s ', sale_device.name)
 
-        if not sale.check_enough_stock():
-            return
+        if modulePSS:
+            if not sale.check_enough_stock():
+                return
 
         Product = Pool().get('product.product')
 
@@ -630,11 +635,12 @@ class WizardSalePayment(Wizard):
                     if line.product not in products:
                         products.append(line.product)
                 # get quantity
-                with Transaction().set_context(locations=locations):
-                    quantities = Product.get_quantity(
-                        products,
-                        sale.get_enough_stock_qty(),
-                        )
+                if modulePSS:
+                    with Transaction().set_context(locations=locations):
+                        quantities = Product.get_quantity(
+                            products,
+                            sale.get_enough_stock_qty(),
+                            )
 
                 # check enough stock
                 for line in sale.lines:
@@ -729,8 +735,11 @@ class WizardSalePayment(Wizard):
         Invoice = pool.get('account.invoice')
         Date = pool.get('ir.date')
         Sale = pool.get('sale.sale')
+        Module = pool.get('ir.module.module')
         Statement = pool.get('account.statement')
         StatementLine = pool.get('account.statement.line')
+        moduleE = Module.search([('name', '=', 'nodux_account_electronic_invoice_ec'), ('state', '=', 'installed')])
+        moduleSe =  Module.search([('name', '=', 'nodux_sale_pos_electronic_invoice_ec'), ('state', '=', 'installed')])
         move_lines = []
         line_move_ids = []
         form = self.start
@@ -1031,7 +1040,8 @@ class WizardSalePayment(Wizard):
 
             pago_en_cero = False
             utiliza_anticipo_venta = False
-            sale.formas_pago_sri = form.tipo_pago_sri
+            if moduleE:
+                sale.formas_pago_sri = form.tipo_pago_sri
             sale.save()
             Sale.workflow_to_end([sale])
             Invoice = Pool().get('account.invoice')
@@ -1249,31 +1259,33 @@ class WizardSalePayment(Wizard):
                         created_lines = MoveLine.create(move_lines_new)
                         Move.post([move])
 
-
-            if sale.shop.lote != None:
-                lote = sale.shop.lote
+            if moduleE:
+                if sale.shop.lote != None:
+                    lote = sale.shop.lote
 
             if invoices:
                 for i in invoices:
                     invoice = i
-                invoice.formas_pago_sri = form.tipo_pago_sri
+                if moduleE:
+                    invoice.formas_pago_sri = form.tipo_pago_sri
                 invoice.save()
                 if sale.comment:
                     invoice.comment = sale.comment
                     invoice.save()
 
-            if sale.fisic_invoice == True :
-                invoice.number = sale.number_invoice
-                invoice.fisic_invoice = True
-                invoice.save()
-            else:
-                if lote == False:
-                    invoice.get_invoice_element()
-                    invoice.get_tax_element()
-                    invoice.generate_xml_invoice()
-                    invoice.get_detail_element()
-                    invoice.action_generate_invoice()
-                    invoice.connect_db()
+            if moduleSe:
+                if sale.fisic_invoice == True :
+                    invoice.number = sale.number_invoice
+                    invoice.fisic_invoice = True
+                    invoice.save()
+                else:
+                    if lote == False:
+                        invoice.get_invoice_element()
+                        invoice.get_tax_element()
+                        invoice.generate_xml_invoice()
+                        invoice.get_detail_element()
+                        invoice.action_generate_invoice()
+                        invoice.connect_db()
 
             sale.description = sale.reference
             sale.save()

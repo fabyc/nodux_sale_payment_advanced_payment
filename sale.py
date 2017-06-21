@@ -173,18 +173,27 @@ class Advanced(ModelSQL, ModelView):
 
     reference = fields.Char('Reference', states={
         'invisible': Eval('pay') == 'efectivo',
+        'readonly': In(Eval('state'), ['posted']),
     })
 
     bank = fields.Many2One('bank', 'Bank', states={
         'invisible': Eval('pay') == 'efectivo',
+        'readonly': In(Eval('state'), ['posted']),
     })
 
     vencimiento = fields.Date('Date Out', states={
         'invisible': Eval('pay') == 'efectivo',
+        'readonly': In(Eval('state'), ['posted']),
     })
 
     account = fields.Char('Account', states={
         'invisible': Eval('pay') == 'efectivo',
+        'readonly': In(Eval('state'), ['posted']),
+    })
+
+    cheque = fields.Char('Nro. de Cheque', states={
+        'invisible': Eval('pay') == 'efectivo',
+        'readonly': In(Eval('state'), ['posted']),
     })
 
     move = fields.Many2One('account.move', 'Move')
@@ -201,6 +210,14 @@ class Advanced(ModelSQL, ModelView):
 
         cls._order.insert(0, ('date', 'ASC'))
         #cls._order.insert(1, ('number', 'DESC'))
+
+    @fields.depends('bank')
+    def on_change_bank(self):
+        res = {}
+        if self.bank:
+            res['account'] = self.bank.nro_cuenta_bancaria
+        return res
+
 
     @staticmethod
     def default_employee():
@@ -432,12 +449,70 @@ class Advanced(ModelSQL, ModelView):
         self.move = move
         self.save()
 
+
+    def prepare_postdated_lines(self):
+        postdated_lines = None
+        pool = Pool()
+        Configuration = pool.get('account.configuration')
+
+        if Configuration(1).default_account_c:
+            account_pay = Configuration(1).default_account_c
+        else:
+            self.raise_user_error('No ha configurado la cuenta por defecto para cheque.'
+            '\nDirijase a Financiero-Configuracion-Configuracion Contable')
+        postdated_lines = []
+        postdated_lines.append({
+            'reference': str(self.move.id),
+            'name': self.number,
+            'amount': self.amount,
+            'account': account_pay,
+            'date_expire': self.vencimiento,
+            'date': self.date,
+            'num_check' : self.cheque,
+            'num_account' : self.account,
+        })
+
+        return postdated_lines
+
+    def create_postdated_check(self, postdated_lines):
+        pool = Pool()
+        Postdated = pool.get('account.postdated')
+        PostdatedLine = pool.get('account.postdated.line')
+        # postdated = Postdated.search([('reference', '=', self.cheque)])
+        # if postdated:
+        #     if postdated_lines != None:
+        #         # postdated[0].lines = postdated_lines
+        #         # postdated[0].save()
+        #         lines = PostdatedLine.create(postdated_lines)
+        #         for line in lines:
+        #             line.postdated = postdated[0]
+        #             line.save()
+        # else:
+        postdated = Postdated()
+        if postdated_lines != None:
+            for line in postdated_lines:
+                date = line['date']
+                postdated.postdated_type = 'check'
+                postdated.party = self.party
+                postdated.post_check_type = 'receipt'
+                postdated.journal = 1
+                postdated.state = 'draft'
+                postdated.date = date
+                postdated.reference = self.cheque
+                postdated.lines = postdated_lines
+                postdated.save()
+
+
     @classmethod
     @ModelView.button
     def post(cls, advanceds):
         for advanced in advanceds:
             advanced.prepare_move_lines()
             advanced.set_number()
+            if advanced.pay == "cheque":
+                postdated_lines = advanced.prepare_postdated_lines()
+                advanced.create_postdated_check(postdated_lines)
+
         cls.write(advanceds, {'state': 'posted'})
 
 class AdvancedReport(Report):
@@ -728,7 +803,6 @@ class WizardSalePayment(Wizard):
             }
 
     def transition_pay_(self):
-        print "Ingresa aqui advanced"
         pool = Pool()
         Period = pool.get('account.period')
         Move = pool.get('account.move')
@@ -1290,6 +1364,11 @@ class WizardSalePayment(Wizard):
             sale.description = sale.reference
             sale.save()
             if (pago_en_cero == True and utiliza_anticipo_venta == True) | (form.utilizar_anticipo == True and form.restante == Decimal(0.0)):
+                print "Ingresa aqui"
+                Configuration = pool.get('account.configuration')
+                if Configuration(1).default_account_advanced:
+                    ac_advanced = Configuration(1).default_account_advanced
+
                 Line = pool.get('account.move.line')
                 account = sale.party.account_receivable
                 lines = []
@@ -1308,6 +1387,12 @@ class WizardSalePayment(Wizard):
                                 line.account.id == account.id):
                             lines.append(line)
                             amount += line.debit - line.credit
+                        if (not line.reconciliation and
+                                    line.party.id == sale.party.id and
+                                    line.account.id == ac_advanced.id):
+                                lines.append(line)
+                                amount += line.debit - line.credit
+
                 if lines and amount == Decimal('0.0'):
                     Line.reconcile(lines)
 
@@ -1325,7 +1410,7 @@ class WizardSalePayment(Wizard):
         else:
             if sale.total_amount != sale.paid_amount:
                 return 'end'
-            if (sale.total_amount == sale.paid_amount) | (sale.state != draft):
+            if (sale.total_amount == sale.paid_amount) | (sale.state != 'draft'):
                 Invoice = Pool().get('account.invoice')
                 invoices = Invoice.search([('description','=',sale.reference)])
                 for i in invoices:

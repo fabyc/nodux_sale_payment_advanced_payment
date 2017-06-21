@@ -28,8 +28,11 @@ the full copyright notices and license terms. -->
     <field name="bank"/>
     <label name="vencimiento"/>
     <field name="vencimiento"/>
+    <newline/>
     <label name="account"/>
     <field name="account"/>
+    <label name="cheque"/>
+    <field name="cheque"/>
     <newline/>
     <label name="comment"/>
     <field name="comment"/>
